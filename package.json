@@ -1,0 +1,13 @@
+{
+  "name": "newbiscuit",
+  "version": "1.0.0",
+  "description": "幼児向けビスケット風ビジュアルプログラミング環境",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
