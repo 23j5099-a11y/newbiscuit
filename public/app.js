@@ -4,13 +4,18 @@ const rulesEl = document.querySelector("#rules");
 const ruleTemplate = document.querySelector("#ruleTemplate");
 const statusEl = document.querySelector("#status");
 const runButton = document.querySelector("#toggleRun");
+const logPanel = document.querySelector("#logPanel");
+const logList = document.querySelector("#logList");
+const toggleLogButton = document.querySelector("#toggleLog");
+const closeLogButton = document.querySelector("#closeLog");
 
 const state = {
   assets: [],
   stageItems: [],
   rules: [],
   running: true,
-  selectedId: null
+  selectedId: null,
+  log: []
 };
 
 let drag = null;
@@ -28,6 +33,30 @@ function uid(prefix) {
 
 function assetById(assetId) {
   return state.assets.find((asset) => asset.id === assetId);
+}
+
+function ruleLabel(ruleId) {
+  return ruleId ? `#${ruleId.replace("rule-", "")}` : "?";
+}
+
+function sideLabel(side) {
+  return side === "left" ? "まえ" : "あと";
+}
+
+function addLog(text) {
+  const time = new Date().toLocaleTimeString("ja-JP", { hour12: false });
+  state.log.push({ time, text });
+  if (state.log.length > 500) state.log.shift();
+  renderLog();
+}
+
+function renderLog() {
+  if (!logList) return;
+  logList.innerHTML = state.log
+    .slice()
+    .reverse()
+    .map((entry) => `<li><time>${entry.time}</time><span>${entry.text}</span></li>`)
+    .join("");
 }
 
 function clamp(value, min, max) {
@@ -53,7 +82,13 @@ function makePiece(item, place) {
   piece.innerHTML = `<img src="${asset.src}" alt="">`;
   if (item.id === state.selectedId) piece.classList.add("selected");
   piece.addEventListener("pointerdown", startPieceDrag);
-  piece.addEventListener("dblclick", () => removePiece(item.id, place));
+  piece.addEventListener("dblclick", () => {
+    if (place === "left" || place === "right") {
+      const asset = assetById(item.assetId);
+      addLog(`メガネ${ruleLabel(zoneRuleId(item.id, place))}の${sideLabel(place)}から「${asset?.name ?? item.assetId}」を消しました`);
+    }
+    removePiece(item.id, place);
+  });
   return piece;
 }
 
@@ -81,6 +116,9 @@ function drawRules() {
     const node = ruleTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.ruleId = rule.id;
     node.querySelector(".delete-rule").addEventListener("click", () => {
+      const names = [...rule.left, ...rule.right]
+        .map((item) => assetById(item.assetId)?.name ?? item.assetId);
+      addLog(`メガネ${ruleLabel(rule.id)}を消しました(中身: ${names.length ? names.join("、") : "なし"})`);
       state.rules = state.rules.filter((entry) => entry.id !== rule.id);
       drawRules();
     });
@@ -142,10 +180,14 @@ function startPieceDrag(event) {
   const item = findItem(id, place);
   if (!item) return;
   state.selectedId = id;
+  const ruleId = event.currentTarget.closest(".lens")?.dataset.ruleId || null;
   drag = {
     kind: "piece",
     id,
     place,
+    ruleId,
+    originX: item.x,
+    originY: item.y,
     assetId: item.assetId,
     ghost: makeGhost(item.assetId, event.clientX, event.clientY)
   };
@@ -166,7 +208,12 @@ function moveDrag(event) {
 function endDrag(event) {
   if (!drag) return;
   const zone = zoneAt(event.clientX, event.clientY);
-  if (zone) dropInto(zone, event.clientX, event.clientY);
+  if (zone) {
+    dropInto(zone, event.clientX, event.clientY);
+  } else if (drag.kind === "piece" && (drag.place === "left" || drag.place === "right")) {
+    const asset = assetById(drag.assetId);
+    addLog(`メガネ${ruleLabel(drag.ruleId)}の${sideLabel(drag.place)}から「${asset?.name ?? drag.assetId}」を消しました`);
+  }
   drag.ghost.remove();
   drag = null;
   clearHotZones();
@@ -192,6 +239,14 @@ function dropInto(zone, clientX, clientY) {
   if (!rule) return;
   const side = zone.dataset.zone;
   rule[side].push(base);
+
+  const asset = assetById(base.assetId);
+  const name = asset?.name ?? base.assetId;
+  if (drag.kind === "piece" && drag.place === side && drag.ruleId === rule.id) {
+    addLog(`メガネ${ruleLabel(rule.id)}の${sideLabel(side)}で「${name}」を(${drag.originX}, ${drag.originY})から(${base.x}, ${base.y})へ動かしました`);
+  } else {
+    addLog(`メガネ${ruleLabel(rule.id)}の${sideLabel(side)}に「${name}」を入れました`);
+  }
 }
 
 function findItem(id, place) {
@@ -201,6 +256,12 @@ function findItem(id, place) {
     if (item) return item;
   }
   return null;
+}
+
+function zoneRuleId(id, place) {
+  if (place !== "left" && place !== "right") return null;
+  const rule = state.rules.find((entry) => entry[place].some((item) => item.id === id));
+  return rule ? rule.id : null;
 }
 
 function removePiece(id, place, shouldRender = true) {
@@ -298,11 +359,28 @@ function applyMatch(match) {
   state.stageItems = next;
 }
 
+function selectSimultaneousMatches(matches) {
+  const shuffled = matches.slice();
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const used = new Set();
+  const selected = [];
+  for (const match of shuffled) {
+    if (match.stageItems.some((item) => used.has(item.id))) continue;
+    match.stageItems.forEach((item) => used.add(item.id));
+    selected.push(match);
+  }
+  return selected;
+}
+
 function step(time) {
   if (state.running && time - lastTick > tickMs) {
     const matches = state.rules.flatMap(findMatches);
     if (matches.length > 0) {
-      applyMatch(matches[Math.floor(Math.random() * matches.length)]);
+      const chosen = selectSimultaneousMatches(matches);
+      for (const match of chosen) applyMatch(match);
       drawStage();
     }
     lastTick = time;
@@ -369,6 +447,12 @@ runButton.addEventListener("click", () => {
   state.running = !state.running;
   runButton.textContent = state.running ? "とめる" : "うごかす";
   statusEl.textContent = state.running ? "うごいています" : "とまっています";
+});
+toggleLogButton.addEventListener("click", () => {
+  logPanel.classList.toggle("hidden");
+});
+closeLogButton.addEventListener("click", () => {
+  logPanel.classList.add("hidden");
 });
 
 init();

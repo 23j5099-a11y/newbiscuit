@@ -22,9 +22,17 @@
           <button id="saveProject" type="button">保存</button>
           <button id="loadProject" type="button">読込</button>
           <button id="clearStage" type="button">ステージ消す</button>
+          <button id="toggleLog" type="button">ログ</button>
           <span id="status" class="status">うごいています</span>
         </div>
         <div id="stage" class="stage drop-zone" data-zone="stage"></div>
+        <aside id="logPanel" class="log-panel hidden" aria-label="ログ">
+          <div class="log-head">
+            <h2>ログ</h2>
+            <button id="closeLog" type="button" aria-label="ログを閉じる">x</button>
+          </div>
+          <ul id="logList" class="log-list"></ul>
+        </aside>
       </section>
 
       <section class="rule-wrap" aria-label="メガネ置き場">
