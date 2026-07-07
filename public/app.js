@@ -43,11 +43,18 @@ function sideLabel(side) {
   return side === "left" ? "まえ" : "あと";
 }
 
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbwjRm6XyGYgSCwI-T53wEf88dXMsilZC-q59skQvW2m9hj65KLfLfiFRiVrSOJQDWo/exec";
+
 function addLog(text) {
   const time = new Date().toLocaleTimeString("ja-JP", { hour12: false });
   state.log.push({ time, text });
   if (state.log.length > 500) state.log.shift();
   renderLog();
+  fetch(SHEET_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ time, text })
+  }).catch(() => {});
 }
 
 function renderLog() {
