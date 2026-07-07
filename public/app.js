@@ -262,6 +262,8 @@ function dropInto(zone, clientX, clientY) {
   const name = asset?.name ?? base.assetId;
   if (drag.kind === "piece" && drag.place === side && drag.ruleId === rule.id) {
     addLog(`メガネ${ruleLabel(rule.id)}の${sideLabel(side)}で「${name}」を(${drag.originX}, ${drag.originY})から(${base.x}, ${base.y})へ動かしました`);
+  } else if (drag.kind === "piece" && drag.ruleId === rule.id && (drag.place === "left" || drag.place === "right") && drag.place !== side) {
+    addLog(`メガネ${ruleLabel(rule.id)}の「${name}」を${sideLabel(drag.place)}から${sideLabel(side)}へ移動しました`);
   } else {
     addLog(`メガネ${ruleLabel(rule.id)}の${sideLabel(side)}に「${name}」を入れました`);
   }
@@ -292,7 +294,9 @@ function removePiece(id, place, shouldRender = true) {
 }
 
 function addRule(rule = null) {
-  state.rules.push(rule || { id: uid("rule"), left: [], right: [] });
+  const newRule = rule || { id: uid("rule"), left: [], right: [] };
+  state.rules.push(newRule);
+  if (!rule) addLog(`メガネ${ruleLabel(newRule.id)}を増やしました`);
   drawRules();
 }
 
