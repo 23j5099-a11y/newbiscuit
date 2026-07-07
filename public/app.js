@@ -36,7 +36,9 @@ function assetById(assetId) {
 }
 
 function ruleLabel(ruleId) {
-  return ruleId ? `#${ruleId.replace("rule-", "")}` : "?";
+  if (!ruleId) return "?";
+  const index = state.rules.findIndex((r) => r.id === ruleId);
+  return index >= 0 ? `#${index + 1}` : "?";
 }
 
 function sideLabel(side) {
