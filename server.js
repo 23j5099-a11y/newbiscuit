@@ -87,6 +87,22 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/log") {
+      const body = await readBody(req);
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwjRm6XyGYgSCwI-T53wEf88dXMsilZC-q59skQvW2m9hj65KLfLfiFRiVrSOJQDWo/exec";
+      const { default: https } = await import("node:https");
+      await new Promise((resolve, reject) => {
+        const url = new URL(SHEET_URL);
+        const options = { hostname: url.hostname, path: url.pathname + url.search, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } };
+        const request = https.request(options, (r) => { r.resume(); r.on("end", resolve); });
+        request.on("error", reject);
+        request.write(body);
+        request.end();
+      });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
     const filePath = safePublicPath(req.url || "/");
     const info = await stat(filePath).catch(() => null);
     if (!info?.isFile()) {

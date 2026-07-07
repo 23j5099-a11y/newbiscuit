@@ -50,7 +50,7 @@ function addLog(text) {
   state.log.push({ time, text });
   if (state.log.length > 500) state.log.shift();
   renderLog();
-  fetch(SHEET_URL, {
+  fetch("/api/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ time, text })
