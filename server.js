@@ -89,7 +89,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "POST" && req.url === "/api/log") {
       const body = await readBody(req);
-      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwjRm6XyGYgSCwI-T53wEf88dXMsilZC-q59skQvW2m9hj65KLfLfiFRiVrSOJQDWo/exec";
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbzjroPcourHavPeVKt70jjDgOA1cHdpUna0Rs_7V6m7-6U5U0OZ_hB7NXS-G61eq1uF/exec";
       const { default: https } = await import("node:https");
       await new Promise((resolve, reject) => {
         const url = new URL(SHEET_URL);

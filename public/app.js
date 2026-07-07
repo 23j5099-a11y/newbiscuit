@@ -45,6 +45,17 @@ function sideLabel(side) {
 
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbwjRm6XyGYgSCwI-T53wEf88dXMsilZC-q59skQvW2m9hj65KLfLfiFRiVrSOJQDWo/exec";
 
+function getUserId() {
+  let userId = localStorage.getItem("newbiscuit_user_id");
+  if (!userId) {
+    userId = "ユーザー" + Math.floor(Math.random() * 900000 + 100000);
+    localStorage.setItem("newbiscuit_user_id", userId);
+  }
+  return userId;
+}
+
+const USER_ID = getUserId();
+
 function addLog(text) {
   const time = new Date().toLocaleTimeString("ja-JP", { hour12: false });
   state.log.push({ time, text });
@@ -53,7 +64,7 @@ function addLog(text) {
   fetch("/api/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ time, text })
+    body: JSON.stringify({ time, userId: USER_ID, text })
   }).catch(() => {});
 }
 
